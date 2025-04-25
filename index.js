@@ -283,7 +283,11 @@ function gen_chart() {
         const boxDims = document.createElement("td")
         boxDims.textContent = `[${result.dimensions[0]}, ${result.dimensions[1]}, ${result.dimensions[2]}]`
         const packLevel = document.createElement("td")
-        packLevel.textContent = result.packLevel
+        if (result.packLevel == "No Pack") {
+            packLevel.textContent = "Box"
+        } else {
+            packLevel.textContent = result.packLevel
+        }
         const price = document.createElement("td")
         price.textContent = result.price
         const recomendation = document.createElement("td")
@@ -306,7 +310,6 @@ function gen_chart() {
     
         printBtn.textContent = "Print"
         printBtn.addEventListener("click", () => {
-            const rowContent = row.innerHTML
             var frame = document.createElement('iframe');
             frame.srcdoc = 
             `<html>
@@ -315,14 +318,20 @@ function gen_chart() {
                     div {
                         font-size: ${state.printScale}vw;
                     }
+                    span {
+                        margin-left: 10vw;
+                    }
                 </style>
                 </head>
                 <body onload="window.print()">
                 <div>
-                    Box dimensions: ${boxDims.outerHTML} <br>
-                    Packing level: ${packLevel.outerHTML} <br>
-                    Price: ${price.outerHTML} <br> 
-                    Recomendation: ${recomendation.outerHTML} <br>
+                    Box dimensions: <br>
+                    <span>${boxDims.outerHTML}</span> <br>
+                    Packing level: <br>
+                    <span>${packLevel.outerHTML}</span> <br>
+                    Price: $${price.outerHTML} <br> 
+                    Recomendation: <br>
+                    <span>${recomendation.outerHTML}</span> <br>
                     Comments: ${comment.outerHTML} <br>
                     Boxes used: ${boxCount.outerHTML} <br>
                 </div>
