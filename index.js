@@ -6,7 +6,7 @@ const state = {
     inputDims: [0, 0, 0],
     inputDimsSorted: [0, 0, 0],
     availableBoxes: [],
-    printScale: 8,
+    printScale: 7,
 }
 
 function gen_checkBoxLabel(id, text, checked) {
@@ -368,7 +368,7 @@ class Box {
         // open_dim: int -> Along which dimension does the box open (for tele)
         // prices: [np_float, sp_float, fp_float, cp_float] -> price for each packing level
         const open_dim_val = dimensions[open_dim]
-        this.dimensions = dimensions.toSorted()     // Just to presort by size
+        this.dimensions = dimensions.toSorted((a, b) => b - a)     // Just to presort by size
         this.open_dim = this.dimensions.findIndex((e) => {return e == open_dim_val})
         this.prices = prices
     }
