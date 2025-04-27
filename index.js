@@ -9,7 +9,7 @@ const state = {
     printScale: 7,
 }
 
-function gen_checkBoxLabel(id, text, checked) {
+function gen_checkBoxLabel(id, text, checked, state_collection) {
     const checkboxDiv = document.createElement("span")
 
     const label = document.createElement("label")
@@ -21,10 +21,10 @@ function gen_checkBoxLabel(id, text, checked) {
     checkbox.checked = checked
     checkbox.id = id
 
-    state.checkBoxes[id] = checked
+    state_collection[id] = checked
 
     function toggle() {
-        state.checkBoxes[id] = !state.checkBoxes[id]
+        state_collection[id] = !state_collection[id]
         gen_chart()
     }
     label.addEventListener("mouseup", toggle)
@@ -36,11 +36,12 @@ function gen_checkBoxLabel(id, text, checked) {
 
 function gen_checkBoxes() {
     const checkBoxesDiv = document.createElement("div")
-    const np_checkBox = gen_checkBoxLabel("npCheckbox", "No Pack", false)
-    const std_checkBox = gen_checkBoxLabel("stdCheckbox", "Standard Pack", true)
-    const frag_checkBox = gen_checkBoxLabel("fragCheckbox", "Fragile Pack", true)
-    const cust_checkBox = gen_checkBoxLabel("custCheckbox", "Custom Pack", false)
-    const tele_checkBox = gen_checkBoxLabel("teleCheckbox", "Telescope Pack", false)
+    checkBoxesDiv.textContent = "Packing levels: "
+    const np_checkBox = gen_checkBoxLabel("npCheckbox", "No Pack", false, state.checkBoxes)
+    const std_checkBox = gen_checkBoxLabel("stdCheckbox", "Standard Pack", true, state.checkBoxes)
+    const frag_checkBox = gen_checkBoxLabel("fragCheckbox", "Fragile Pack", true, state.checkBoxes)
+    const cust_checkBox = gen_checkBoxLabel("custCheckbox", "Custom Pack", false, state.checkBoxes)
+    const tele_checkBox = gen_checkBoxLabel("teleCheckbox", "Telescope Pack", false, state.checkBoxes)
     checkBoxesDiv.appendChild(np_checkBox)
     checkBoxesDiv.appendChild(std_checkBox)
     checkBoxesDiv.appendChild(frag_checkBox)
@@ -50,37 +51,12 @@ function gen_checkBoxes() {
     container.appendChild(checkBoxesDiv)
 }
 
-function gen_configBoxLabel(id, text, value) {
-    const configDiv = document.createElement("span")
-
-    const label = document.createElement("label")
-    label.textContent = text
-    label.setAttribute("for", id)
-
-    const input = document.createElement("input")
-    input.setAttribute("type", "checkbox")
-    input.checked = value
-    input.id = id
-
-    state.config[id] = value
-
-    function toggle() {
-        state.config[id] = !state.config[id]
-        gen_chart()
-    }
-    label.addEventListener("mouseup", toggle)
-    input.addEventListener("mouseup", toggle)
-    configDiv.appendChild(input)
-    configDiv.appendChild(label)
-    return configDiv
-}
-
 function gen_configBoxes() {
     const configDiv = document.createElement("div")
-    const showImpossible = gen_configBoxLabel("showImpossible", "Show impossible boxes", false)
-    const showNoSpace = gen_configBoxLabel("showNoSpace", "Show no space boxes", false)
-    const showPossible = gen_configBoxLabel("showPossible", "Show possible boxes", true)
-    const scorePriority = gen_configBoxLabel("scorePriority", "Sort by score", false)
+    const showImpossible = gen_checkBoxLabel("showImpossible", "Show impossible boxes", false, state.config)
+    const showNoSpace = gen_checkBoxLabel("showNoSpace", "Show no space boxes", false, state.config)
+    const showPossible = gen_checkBoxLabel("showPossible", "Show possible boxes", true, state.config)
+    const scorePriority = gen_checkBoxLabel("scorePriority", "Sort by score", false, state.config)
 
     configDiv.appendChild(scorePriority)
     configDiv.appendChild(showImpossible)
