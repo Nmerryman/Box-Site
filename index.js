@@ -1,8 +1,9 @@
 
 const container = document.getElementById("container")
 const state = {
-    checkBoxes: {},
-    config: {},
+    packingLevelBoxes: {},
+    altPackingStrats: {},
+    resFilters: {},
     inputDims: [0, 0, 0],
     inputDimsSorted: [0, 0, 0],
     availableBoxes: [],
@@ -34,29 +35,47 @@ function gen_checkBoxLabel(id, text, checked, state_collection) {
     return checkboxDiv
 }
 
-function gen_checkBoxes() {
-    const checkBoxesDiv = document.createElement("div")
-    checkBoxesDiv.textContent = "Packing levels: "
-    const np_checkBox = gen_checkBoxLabel("npCheckbox", "No Pack", false, state.checkBoxes)
-    const std_checkBox = gen_checkBoxLabel("stdCheckbox", "Standard Pack", true, state.checkBoxes)
-    const frag_checkBox = gen_checkBoxLabel("fragCheckbox", "Fragile Pack", true, state.checkBoxes)
-    const cust_checkBox = gen_checkBoxLabel("custCheckbox", "Custom Pack", false, state.checkBoxes)
-    const tele_checkBox = gen_checkBoxLabel("teleCheckbox", "Telescope Pack", false, state.checkBoxes)
-    checkBoxesDiv.appendChild(np_checkBox)
-    checkBoxesDiv.appendChild(std_checkBox)
-    checkBoxesDiv.appendChild(frag_checkBox)
-    checkBoxesDiv.appendChild(cust_checkBox)
-    checkBoxesDiv.appendChild(tele_checkBox)
+function gen_packingLevelBoxes() {
+    const packingLevelBoxesDiv = document.createElement("div")
+    packingLevelBoxesDiv.textContent = "Packing levels: "
+    const np_checkBox = gen_checkBoxLabel("npCheckbox", "No Pack", false, state.packingLevelBoxes)
+    const std_checkBox = gen_checkBoxLabel("stdCheckbox", "Standard Pack", true, state.packingLevelBoxes)
+    const frag_checkBox = gen_checkBoxLabel("fragCheckbox", "Fragile Pack", false, state.packingLevelBoxes)
+    const cust_checkBox = gen_checkBoxLabel("custCheckbox", "Custom Pack", false, state.packingLevelBoxes)
+    // const tele_checkBox = gen_checkBoxLabel("teleCheckbox", "Telescope Pack", false, state.packingLevelBoxes)
+    packingLevelBoxesDiv.appendChild(np_checkBox)
+    packingLevelBoxesDiv.appendChild(std_checkBox)
+    packingLevelBoxesDiv.appendChild(frag_checkBox)
+    packingLevelBoxesDiv.appendChild(cust_checkBox)
+    // packingLevelBoxesDiv.appendChild(tele_checkBox)
 
-    container.appendChild(checkBoxesDiv)
+    container.appendChild(packingLevelBoxesDiv)
+}
+
+function gen_altPackingStrategies() {
+    const strategiesDiv = document.createElement("div")
+    strategiesDiv.textContent = "Packing Strategies: "
+    const normalBox = gen_checkBoxLabel("normalCheckbox", "Normal", true, state.altPackingStrats)
+    const telescopeBox = gen_checkBoxLabel("telescopeCheckbox", "Telescoping", false, state.altPackingStrats)
+    const cheatingBox = gen_checkBoxLabel("cheatingCheckbox", "Cheating", false, state.altPackingStrats)
+    const flatBox = gen_checkBoxLabel("flatCheckbox", "Flattened", false, state.altPackingStrats)
+
+    strategiesDiv.appendChild(normalBox)
+    strategiesDiv.appendChild(telescopeBox)
+    strategiesDiv.appendChild(cheatingBox)
+    strategiesDiv.appendChild(flatBox)
+
+    container.appendChild(strategiesDiv)
+    
 }
 
 function gen_configBoxes() {
     const configDiv = document.createElement("div")
-    const showImpossible = gen_checkBoxLabel("showImpossible", "Show impossible boxes", false, state.config)
-    const showNoSpace = gen_checkBoxLabel("showNoSpace", "Show no space boxes", false, state.config)
-    const showPossible = gen_checkBoxLabel("showPossible", "Show possible boxes", true, state.config)
-    const scorePriority = gen_checkBoxLabel("scorePriority", "Sort by score", false, state.config)
+    configDiv.textContent = "Result Filter: "
+    const showImpossible = gen_checkBoxLabel("showImpossible", "Show impossible boxes", false, state.resFilters)
+    const showNoSpace = gen_checkBoxLabel("showNoSpace", "Show no space boxes", false, state.resFilters)
+    const showPossible = gen_checkBoxLabel("showPossible", "Show possible boxes", true, state.resFilters)
+    const scorePriority = gen_checkBoxLabel("scorePriority", "Sort by score", false, state.resFilters)
 
     configDiv.appendChild(scorePriority)
     configDiv.appendChild(showImpossible)
@@ -127,6 +146,7 @@ function gen_dimInputs() {
 function gen_html() {
     const infoDiv = document.createElement("div")
 
+    // Clickable help button
     const helpButton = document.createElement("button")
     infoDiv.appendChild(helpButton)
     helpButton.textContent = "Help"
@@ -152,6 +172,7 @@ function gen_html() {
         }
     })
 
+    // Clickable debug button
     const debugButton = document.createElement("button")
     infoDiv.appendChild(debugButton)
     debugButton.textContent = "Show Debug"
@@ -166,7 +187,8 @@ function gen_html() {
             const dumpBtn = document.createElement("button")
             dumpBtn.textContent = "Dump state"
             dumpBtn.addEventListener("click", () => {
-                console.log(JSON.stringify(state))
+                // console.log(JSON.stringify(state))
+                console.log(state)
             })
             debugDiv.appendChild(dumpBtn)
 
@@ -206,11 +228,10 @@ function gen_html() {
             infoDiv.appendChild(debugDiv)
         }
     })
-    // container.appendChild(infoDiv)
     
-    // debugButton.addEventListener("click", () => console.log(JSON.stringify(state)))
     container.appendChild(infoDiv)
-    gen_checkBoxes()
+    gen_packingLevelBoxes()
+    gen_altPackingStrategies()
     gen_configBoxes()
     gen_dimInputs()
 }
@@ -224,29 +245,46 @@ function gen_chart() {
     chartDiv.id = "chartContainer"
     const table = document.createElement("table")
     const header = document.createElement("tr")
-    for (const text of ["Score (fit accuracy)", "Box Dims", "Pack Level", "Price", "Recomendation", "Comments", "Boxes Used"]) {
+    for (const text of ["Score (fit accuracy)", "Box Dims", "Pack Level", "Price", "Recomendation", "Comments"]) {
         const th = document.createElement("th")
         th.textContent = text
         header.appendChild(th)
     };
     table.appendChild(header)
+
+    const checkBoxState = {     // Provides a mapping from boxResult generation to the checkboxes
+        "No Pack": state.packingLevelBoxes["npCheckbox"],
+        "Standard Pack": state.packingLevelBoxes["stdCheckbox"],
+        "Fragile Pack": state.packingLevelBoxes["fragCheckbox"],
+        "Custom Pack": state.packingLevelBoxes["custCheckbox"],
+        "Normal": state.altPackingStrats["normalCheckbox"],
+        "Telescoping": state.altPackingStrats["telescopeCheckbox"],
+        "Cheating": state.altPackingStrats["cheatingCheckbox"],
+        "Flattened": state.altPackingStrats["flatCheckbox"],
+        "fits": true,
+        "possible": state.resFilters["showPossible"],
+        "no space": state.resFilters["showNoSpace"],
+        "impossible": state.resFilters["showImpossible"],
+    }
     const boxResultCollection = []
     for (const box of state.availableBoxes) {
         const boxResults = box.gen_boxResults()
-        for (const result of boxResults) {
-            if (result.recomendationLevel == "impossible" && !state.config["showImpossible"]) {
-                continue
+
+        console.log(boxResults)
+        for (const packingLevel of Object.keys(boxResults)) {
+            if (checkBoxState[packingLevel]) {
+                for (const packingStrategy of Object.keys(boxResults[packingLevel])) {
+                    if (checkBoxState[packingStrategy]) {
+                        if (checkBoxState[boxResults[packingLevel][packingStrategy].recomendationLevel]) {
+                            boxResultCollection.push(boxResults[packingLevel][packingStrategy])
+                        }
+                    }
+                }
+
             }
-            if (result.recomendationLevel == "no space" && !state.config["showNoSpace"]) {
-                continue
-            }
-            if (result.recomendationLevel == "possible" && !state.config["showPossible"]) {
-                continue
-            }
-            boxResultCollection.push(result)
         }
     }
-    if (state.config["scorePriority"]) {
+    if (state.resFilters["scorePriority"]) {
         boxResultCollection.sort((a, b) => {return a.score - b.score})
     } else {
         boxResultCollection.sort((a, b) => {return a.price - b.price})
@@ -327,12 +365,11 @@ function gen_chart() {
 }
 
 class BoxResult {
-    constructor(dimensions, packLevel, price, recomendationLevel, boxCount, comment, score) {
+    constructor(dimensions, packLevel, price, recomendationLevel, comment, score) {
         this.dimensions = dimensions    // Box dims
         this.packLevel = packLevel  // Packing level
         this.price = price  // Selection price
         this.recomendationLevel = recomendationLevel    // fits vs possible vs no space vs impossible
-        this.boxCount = boxCount    // Telescoping boxes needed
         this.comment = comment  // Might be needed to explain the status?
         this.score = score  // How good is the fit?
     }
@@ -347,89 +384,62 @@ class Box {
         this.dimensions = dimensions.toSorted((a, b) => b - a)     // Just to presort by size
         this.open_dim = this.dimensions.findIndex((e) => {return e == open_dim_val})
         this.prices = prices
+        this.packingLevelNames = ["No Pack", "Standard Pack", "Fragile Pack", "Custom Pack"]
+        this.altPackingNames = ["Normal", "Telescoping", "Cheating", "Flattened"]
+        this.packingOffsets = {
+            "No Pack": 0,
+            "Standard Pack": 2,
+            "Fragile Pack": 4,
+            "Custom Pack": 6
+        }
     }
-    
+
     static NormalBox(dimensions, prices) {
         return new Box(dimensions, 2, prices)
     }
 
-    boxSpace() {
-        // How much space between box and item(s)
-        return [this.dimensions[0] - state.inputDimsSorted[0], this.dimensions[1] - state.inputDimsSorted[1], this.dimensions[2] - state.inputDimsSorted[2]]
+    boxSpace(boxDims, itemDims) {
+        // itemDims: [x, y, z] -> dimensions of the item to be packed
+        // How much space between box and item(s) based on passed dimensions
+        return [boxDims[0] - itemDims[0], boxDims[1] - itemDims[1], boxDims[2] - itemDims[2]]
     }
 
-    calcScore(space, expectedSpace) {
+    calcScore(space) {
         // space: [x, y, z] -> space in each dimension in the box
         // expected space: int -> how much space each dimension should have
-        return (space[0] - expectedSpace) ** 2 + (space[1] - expectedSpace) ** 2 + (space[2] - expectedSpace) ** 2 
+        return space[0] ** 2 + space[1] ** 2 + space[2] ** 2 
+    }
+
+    // Return the verdict on whether what the calculated offsets are in terms of feasibility
+    // offsets: [x, y, z] -> space in each dimension in the box
+    // packingLevel: str -> packing level to be used
+    // returns: str -> "impossible", "no space", "possible", "fits"
+    calcRecomendation(offsets, packingLevel) {
+        const lowestDim = Math.min(...offsets)
+        if (lowestDim < 0) {
+            return "impossible"
+        } else if (lowestDim == 0) {
+            return "no space"
+        } else if (lowestDim > 0 && lowestDim < this.packingOffsets[packingLevel]) {
+            return "possible"
+        }
+        return "fits"
     }
 
     gen_boxResults() {
         // Based on current state
-        const collection = []
-        const space = this.boxSpace()
-        const lowestDim = Math.min(...space)
-        if (state.checkBoxes["npCheckbox"]) {
-            const packingSpace = 0
-            let recomendation = ""
-            if (lowestDim < 0) {
-                recomendation = "impossible"
-            } else if (lowestDim == 0) {
-                recomendation = "no space"
-            } else {
-                recomendation = "fits"
-            }
-            const result = new BoxResult(this.dimensions, "No Pack", this.prices[0], recomendation, 1, "", this.calcScore(space, packingSpace))
-            collection.push(result)
-        }
-        if (state.checkBoxes["stdCheckbox"]) {
-            const packingSpace = 2
-            let recomendation = ""
-            if (lowestDim < 0) {
-                recomendation = "impossible"
-            } else if (lowestDim == 0) {
-                recomendation = "no space"
-            } else if (lowestDim > 0 && lowestDim < packingSpace) {
-                recomendation = "possible"
-            } else {
-                recomendation = "fits"
-            }
-            const result = new BoxResult(this.dimensions, "Standard Pack", this.prices[1], recomendation, 1, "", this.calcScore(space, packingSpace))
-            collection.push(result)
-        }
-        if (state.checkBoxes["fragCheckbox"]) {
-            const packingSpace = 4
-            let recomendation = ""
-            if (lowestDim < 0) {
-                recomendation = "impossible"
-            } else if (lowestDim == 0) {
-                recomendation = "no space"
-            } else if (lowestDim > 0 && lowestDim < packingSpace) {
-                recomendation = "possible"
-            } else {
-                recomendation = "fits"
-            }
-            const result = new BoxResult(this.dimensions, "Fragile Pack", this.prices[2], recomendation, 1, "", this.calcScore(space, packingSpace))
-            collection.push(result)
-        }
-        if (state.checkBoxes["custCheckbox"]) {
-            const packingSpace = 6
-            let recomendation = ""
-            if (lowestDim < 0) {
-                recomendation = "impossible"
-            } else if (lowestDim == 0) {
-                recomendation = "no space"
-            } else if (lowestDim > 0 && lowestDim < packingSpace) {
-                recomendation = "possible"
-            } else {
-                recomendation = "fits"
-            }
-            const result = new BoxResult(this.dimensions, "Custom Pack", this.prices[3], recomendation, 1, "", this.calcScore(space, packingSpace))
-            collection.push(result)
-        }
-        if (state.checkBoxes["teleCheckbox"]) {
-            const packingSpace = 4
-            // Box constraints
+        const result = {}
+        for (const packingLevel of this.packingLevelNames) {
+            result[packingLevel] = {}
+
+            // TODO Could check for which alt packing strategies are selected and only calculate those
+            // Handle normal boxes
+            const offsetSpace = this.boxSpace(this.dimensions, state.inputDimsSorted)
+            result[packingLevel]["Normal"] = new BoxResult(this.dimensions, packingLevel, 
+                this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], 
+                this.calcRecomendation(offsetSpace, packingLevel), "", this.calcScore(offsetSpace))
+            
+            // Handle Telescoping boxes
             let largerConstraint = 0
             let smallerConstraint = 0
             if (this.open_dim == 0) {
@@ -442,42 +452,28 @@ class Box {
                 largerConstraint = this.dimensions[0]
                 smallerConstraint = this.dimensions[1]
             }
-            const minLength = state.inputDimsSorted[0] + packingSpace
-            const largerSpace = largerConstraint - state.inputDimsSorted[1]
-            const smallerSpace = smallerConstraint - state.inputDimsSorted[2]
-            const score = (largerSpace - packingSpace) ** 2 + (smallerSpace - packingSpace) ** 2
-            const flapSize = smallerConstraint / 2
-            const endBoxLen = this.dimensions[this.open_dim] + flapSize
-            const centerBoxLen = endBoxLen + flapSize
-            const centerRemaining = minLength - 2 * endBoxLen
+            const minLength = state.inputDimsSorted[0] + this.packingOffsets[packingLevel]
+            const largerOffset = largerConstraint - state.inputDimsSorted[1] - this.packingOffsets[packingLevel]
+            const smallerOffset = smallerConstraint - state.inputDimsSorted[2] - this.packingOffsets[packingLevel]
+            const score = this.calcScore([largerOffset, smallerOffset, 0])
+            const flapLength = smallerConstraint / 2
+            const endBoxLength = this.dimensions[this.open_dim] + flapLength
+            const centerBoxLength = endBoxLength + flapLength
+            const centerRemaining = minLength - 2 * endBoxLength
             let centerBoxes = 0
             if (centerRemaining > 0) {
-                centerBoxes = Math.ceil(centerRemaining / centerBoxLen)
+                centerBoxes = Math.ceil(centerRemaining / centerBoxLength)
             }
             const totalBoxes = 2 + centerBoxes
-            const totalCost = this.prices[3] + this.prices[1] * (totalBoxes - 1)
+            const totalCost = this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)] * totalBoxes
+            result[packingLevel]["Telescoping"] = new BoxResult(this.dimensions, packingLevel,
+                totalCost, this.calcRecomendation([largerOffset, smallerOffset, this.packingOffsets[packingLevel]], packingLevel),
+                `Expected dims: [${minLength}, ${largerConstraint}, ${smallerConstraint}] with ${totalBoxes} boxes`, score)
 
-            let recomendation = ""
-            if (largerSpace < 0 || smallerSpace < 0) {
-                recomendation = "impossible"
-            } else if (largerSpace == 0 || smallerSpace == 0) {
-                recomendation = "no space"
-            } else if (largerSpace < packingSpace || smallerSpace < packingSpace) {
-                recomendation = "possible"
-            } else {
-                recomendation = "fits"
-            }
-            const result = new BoxResult(this.dimensions, "Telescoped", totalCost, recomendation, totalBoxes, `Expected dims: [${minLength}, ${largerConstraint}, ${smallerConstraint}]`, score)       
-            collection.push(result)
-        }
-        return collection
+        }            
+
+        return result
     }
-
-}
-
-function create_box() {
-    new Box([6, 6, 6], 2, [5.99, 8.89, 10.74, 12.48])
-
 }
 
 function load_boxes() {
