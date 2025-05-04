@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -14,6 +14,10 @@ async def root():
 async def base_script():
     with open("index.js", "r") as f:
         return HTMLResponse(f.read(), media_type="text/javascript")
+
+@app.get("/favicon.ico", response_class=FileResponse)
+async def favicon():
+    return FileResponse("favicon.ico")
 
 
 class Comment(BaseModel):
