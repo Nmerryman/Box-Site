@@ -280,7 +280,7 @@ function gen_chart() {
     for (const box of state.availableBoxes) {
         const boxResults = box.gen_boxResults()
 
-        console.log(boxResults)
+        // console.log(boxResults)
         for (const packingLevel of Object.keys(boxResults)) {
             if (checkBoxState[packingLevel]) {
                 for (const packingStrategy of Object.keys(boxResults[packingLevel])) {
@@ -472,10 +472,7 @@ class Box {
         // Handle cut down boxes
         // Handle easy case first
         const offsetSpace = this.boxSpace(this.dimensions, state.inputDimsSorted)
-        console.log(offsetSpace)
-        if (offsetSpace[this.open_dim] > 0) {
-            offsetSpace[this.open_dim] = this.packingOffsets[packingLevel]
-        }
+        offsetSpace[this.open_dim] = Math.min(offsetSpace[this.open_dim], this.packingOffsets[packingLevel])
         const score = this.calcScore(offsetSpace)
         return new BoxResult(this.dimensions, packingLevel,
             this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(offsetSpace, packingLevel),
