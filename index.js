@@ -56,11 +56,13 @@ function gen_altPackingStrategies() {
     const strategiesDiv = document.createElement("div")
     strategiesDiv.textContent = "Packing Strategies: "
     const normalBox = gen_checkBoxLabel("normalCheckbox", "Normal", true, state.altPackingStrats)
+    const cutDownBox = gen_checkBoxLabel("cutDownCheckbox", "Cut Down", false, state.altPackingStrats)
     const telescopeBox = gen_checkBoxLabel("telescopeCheckbox", "Telescoping", false, state.altPackingStrats)
     const cheatingBox = gen_checkBoxLabel("cheatingCheckbox", "Cheating", false, state.altPackingStrats)
     const flatBox = gen_checkBoxLabel("flatCheckbox", "Flattened", false, state.altPackingStrats)
 
     strategiesDiv.appendChild(normalBox)
+    strategiesDiv.appendChild(cutDownBox)
     strategiesDiv.appendChild(telescopeBox)
     strategiesDiv.appendChild(cheatingBox)
     strategiesDiv.appendChild(flatBox)
@@ -265,6 +267,7 @@ function gen_chart() {
         "Fragile Pack": state.packingLevelBoxes["fragCheckbox"],
         "Custom Pack": state.packingLevelBoxes["custCheckbox"],
         "Normal": state.altPackingStrats["normalCheckbox"],
+        "Cut Down": state.altPackingStrats["cutDownCheckbox"],
         "Telescoping": state.altPackingStrats["telescopeCheckbox"],
         "Cheating": state.altPackingStrats["cheatingCheckbox"],
         "Flattened": state.altPackingStrats["flatCheckbox"],
@@ -465,6 +468,20 @@ class Box {
             this.calcRecomendation(offsetSpace, packingLevel), "", this.calcScore(offsetSpace), "Normal")
     }
 
+    gen_cutDownBoxResults(packingLevel) {
+        // Handle cut down boxes
+        // Handle easy case first
+        const offsetSpace = this.boxSpace(this.dimensions, state.inputDimsSorted)
+        console.log(offsetSpace)
+        if (offsetSpace[this.open_dim] > 0) {
+            offsetSpace[this.open_dim] = this.packingOffsets[packingLevel]
+        }
+        const score = this.calcScore(offsetSpace)
+        return new BoxResult(this.dimensions, packingLevel,
+            this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(offsetSpace, packingLevel),
+            `Expected dims: [${state.inputDimsSorted[0] + offsetSpace[0]}, ${state.inputDimsSorted[1] + offsetSpace[1]}, ${state.inputDimsSorted[2] + offsetSpace[2]}]`, score, "Cut Down")
+    }
+
     gen_telescopingBoxResults(packingLevel) {
         // Handle Telescoping boxes
         const minLength = state.inputDimsSorted[0] + this.packingOffsets[packingLevel]
@@ -526,7 +543,6 @@ class Box {
 
     }
 
-
     gen_flattenedBoxResults(packingLevel) {
 
         // Handle Flattened boxes
@@ -549,6 +565,8 @@ class Box {
 
             // TODO Could check for which alt packing strategies are selected and only calculate those
             result[packingLevel]["Normal"] = this.gen_normalBoxResults(packingLevel)
+
+            result[packingLevel]["Cut Down"] = this.gen_cutDownBoxResults(packingLevel)
             
             result[packingLevel]["Telescoping"] = this.gen_telescopingBoxResults(packingLevel)
 
