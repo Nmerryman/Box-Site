@@ -536,39 +536,29 @@ class Box {
         }
 
         // Handle cheating boxes
-        const dimZeroSpace = this.dimensions[0] - this.packingOffsets[packingLevel]
-        const dimOneSpace = this.dimensions[1] - this.packingOffsets[packingLevel]
-        const dimTwoSpace = this.dimensions[2] - this.packingOffsets[packingLevel]
 
-        let fit = calcRotatedSize(dimZeroSpace, dimOneSpace, state.inputDimsSorted[0], state.inputDimsSorted[1])
-        let boxSpace = this.boxSpace(this.dimensions, [fit[0], fit[1], state.inputDimsSorted[2]])
-        let score = this.calcScore(boxSpace)
-        let bestScore = score
-        let bestResult = new BoxResult(this.dimensions, packingLevel, 
-            this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(boxSpace, packingLevel),
-            "Internal dims: [" + fit[0].toFixed(1) + ", " + fit[1].toFixed(1) + ", " + state.inputDimsSorted[2] + "]", bestScore, "Cheating")
-        
-        fit = calcRotatedSize(dimZeroSpace, dimTwoSpace, state.inputDimsSorted[0], state.inputDimsSorted[2])
-        boxSpace = this.boxSpace(this.dimensions, [fit[0], state.inputDimsSorted[1], fit[1]])
-        score = this.calcScore(boxSpace)
-        if (score < bestScore) {
-            bestScore = score
-            bestResult = new BoxResult(this.dimensions, packingLevel, 
-                this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(boxSpace, packingLevel),
-                "Internal dims: [" + fit[0].toFixed(1) + ", " + state.inputDimsSorted[1] + ", " + fit[1].toFixed(1) + "]", bestScore, "Cheating")
+        let bestScore = 1000000
+        let bestResult = null
+        for (const normalIndex of [0, 1, 2]) {
+            const largerDim = Math.max(this.dimensions[(normalIndex + 1) % 3], this.dimensions[(normalIndex + 2) % 3])
+            const smallerDim = Math.min(this.dimensions[(normalIndex + 1) % 3], this.dimensions[(normalIndex + 2) % 3])
+            const largerInput = Math.max(state.inputDimsSorted[(normalIndex + 1) % 3], state.inputDimsSorted[(normalIndex + 2) % 3])
+            const smallerInput = Math.min(state.inputDimsSorted[(normalIndex + 1) % 3], state.inputDimsSorted[(normalIndex + 2) % 3])
+            const rotatedSize = calcRotatedSize(largerDim, smallerDim, largerInput, smallerInput)
+            const newInputDims = [0, 0, 0]
+            newInputDims[normalIndex] = state.inputDimsSorted[normalIndex]
+            newInputDims[(normalIndex + 1) % 3] = rotatedSize[0]
+            newInputDims[(normalIndex + 2) % 3] = rotatedSize[1]
+            const boxSpace = this.boxSpace(this.dimensions, newInputDims)
+            const score = this.calcScore(boxSpace)
+            if (score < bestScore) {
+                bestScore = score
+                bestResult = new BoxResult(this.dimensions, packingLevel,
+                    this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(boxSpace, packingLevel),
+                    `Internal dims: [${newInputDims[0].toFixed(1)}, ${newInputDims[1].toFixed(1)}, ${newInputDims[2].toFixed(1)}]`, score, "Cheating")
+            }
         }
-        fit = calcRotatedSize(dimOneSpace, dimTwoSpace, state.inputDimsSorted[1], state.inputDimsSorted[2])
-        boxSpace = this.boxSpace(this.dimensions, [state.inputDimsSorted[0], fit[0], fit[1]])
-        score = this.calcScore(boxSpace)
-        if (score < bestScore) {
-            bestScore = score
-            bestResult = new BoxResult(this.dimensions, packingLevel, 
-                this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(boxSpace, packingLevel),
-                "Internal dims: [" + state.inputDimsSorted[0] + ", " + fit[0].toFixed(1) + ", " + fit[1].toFixed(1) + "]", bestScore, "Cheating")
-        }
-
         return bestResult
-
     }
 
     gen_flattenedBoxResults(packingLevel) {
