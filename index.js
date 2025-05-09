@@ -25,7 +25,7 @@ function gen_checkBoxLabel(id, text, checked, state_collection) {
     state_collection[id] = checked
 
     function toggle() {
-        state_collection[id] = !state_collection[id]
+        state_collection[id] = !checkbox.checked    // ~ because the event runs first
         gen_chart()
     }
     label.addEventListener("mouseup", toggle)
@@ -254,7 +254,7 @@ function gen_chart() {
     chartDiv.id = "chartContainer"
     const table = document.createElement("table")
     const header = document.createElement("tr")
-    for (const text of ["Score (fit accuracy)", "Box Dims", "Pack Level", "Price", "Recomendation", "Pack Strategy", "Comments"]) {
+    for (const text of ["Tightness (Extra Volume)", "Box Dims", "Pack Level", "Price", "Recomendation", "Pack Strategy", "Comments"]) {
         const th = document.createElement("th")
         th.textContent = text
         header.appendChild(th)
@@ -295,9 +295,9 @@ function gen_chart() {
         }
     }
     if (state.resFilters["scorePriority"]) {
-        boxResultCollection.sort((a, b) => {return a.score - b.score})
+        boxResultCollection.sort((a, b) => {return (a.score * 1000 + a.price) - (b.score * 1000 + b.price)})    // Use other as a tie breaker
     } else {
-        boxResultCollection.sort((a, b) => {return a.price - b.price})
+        boxResultCollection.sort((a, b) => {return (a.price * 1000 + a.score) - (b.price * 1000 + b.score)})
     }
     if (boxResultCollection.length == 0) {
         const noResults = document.createElement("div")
@@ -427,7 +427,8 @@ class Box {
         }
         this.flapLength = this.smallerConstraint / 2
 
-        this.debug = this.largerConstraint == 6 && this.smallerConstraint == 6 && this.openLength == 48
+        // this.debug = this.largerConstraint == 6 && this.smallerConstraint == 6 && this.openLength == 48
+        this.debug = false
         this.debugState = null
     }
 
@@ -458,6 +459,12 @@ class Box {
         return extraSpace[0] ** 2 + extraSpace[1] ** 2 + extraSpace[2] ** 2 
     }
 
+    getPrice(packingLevel) {
+        // packingLevel: str -> packing level to be used
+        // returns: float -> price of the box
+        return this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)]
+    }
+
     // Return the verdict on whether what the calculated offsets are in terms of feasibility
     // offsets: [x, y, z] -> space in each dimension in the box
     // packingLevel: str -> packing level to be used
@@ -466,7 +473,7 @@ class Box {
         const lowestDim = Math.min(...offsets)
         if (lowestDim < 0) {
             return "impossible"
-        } else if (lowestDim == 0) {
+        } else if (lowestDim == 0 && packingLevel != "No Pack") {
             return "no space"
         } else if (lowestDim > 0 && lowestDim < this.packingOffsets[packingLevel]) {
             return "possible"
@@ -477,24 +484,14 @@ class Box {
     gen_normalBoxResults(packingLevel) {
         // Handle normal boxes
         const offsetSpace = this.boxSpace(this.dimensions, state.inputDimsSorted)
-        return new BoxResult(this.dimensions, packingLevel, 
-            this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], 
+        return new BoxResult(this.dimensions, packingLevel, this.getPrice(packingLevel), 
             this.calcRecomendation(offsetSpace, packingLevel), "", this.calcScore(offsetSpace), "Normal")
     }
 
     gen_cutDownBoxResults(packingLevel) {
         // Handle cut down boxes
-        // Handle easy case first
-        // const offsetSpace = this.boxSpace(this.dimensions, state.inputDimsSorted)
-        // offsetSpace[this.open_dim] = Math.min(offsetSpace[this.open_dim], this.packingOffsets[packingLevel])
-        // const score = this.calcScore(offsetSpace)
-        // return new BoxResult(this.dimensions, packingLevel,
-        //     this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(offsetSpace, packingLevel),
-        //     `Expected dims: [${state.inputDimsSorted[0] + offsetSpace[0]}, ${state.inputDimsSorted[1] + offsetSpace[1]}, ${state.inputDimsSorted[2] + offsetSpace[2]}]`, score, "Cut Down")
-        // Check if which dim gets squashed
         let bestScore = 1000000
-        let bestOpenIndex = 0
-        let bestOffset = null
+        let bestResult = null
         for (const openInputIndex of [0, 1, 2]) {
             const largerInput = Math.max(state.inputDimsSorted[(openInputIndex + 1) % 3], state.inputDimsSorted[(openInputIndex + 2) % 3])
             const smallerInput = Math.min(state.inputDimsSorted[(openInputIndex + 1) % 3], state.inputDimsSorted[(openInputIndex + 2) % 3])
@@ -503,24 +500,27 @@ class Box {
                 this.smallerConstraint - smallerInput,
                 Math.min(this.packingOffsets[packingLevel], this.openLength - state.inputDimsSorted[openInputIndex])
             ]
-            // Not sure if this breaks on testing rotation where dims are slightly to small instead of fitting by default
-            const score = this.calcScore([testOffset[0] - this.packingOffsets[packingLevel], testOffset[1] - this.packingOffsets[packingLevel], testOffset[2] - this.packingOffsets[packingLevel]])
+            const score = this.calcScore(testOffset)
             if (score < bestScore) {
                 bestScore = score
-                bestOpenIndex = openInputIndex
-                bestOffset = testOffset
+                bestResult = new BoxResult(this.dimensions, packingLevel, this.getPrice(packingLevel), this.calcRecomendation(testOffset, packingLevel),
+                    `Expected dims: [${this.largerConstraint}, ${this.smallerConstraint}, ${Math.min(this.openLength, state.inputDimsSorted[openInputIndex] + this.packingOffsets[packingLevel])}]`, score, "Cut Down")
             }
         }
-        return new BoxResult(this.dimensions, packingLevel,
-            this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(bestOffset, packingLevel),
-            `Expected dims: [${this.largerConstraint}, ${this.smallerConstraint}, ${Math.min(this.openLength, state.inputDimsSorted[bestOpenIndex] + this.packingOffsets[packingLevel])}]`, bestScore, "Cut Down")
+        return bestResult
+    }
+
+    nextLevel(packingLevel) {   // I don't like this out here, but then I don't have to deal with `this` scoping
+        const index = this.packingLevelNames.findIndex(e => e == packingLevel)
+        return this.packingLevelNames[Math.min(index + 1, this.packingLevelNames.length - 1)]
     }
 
     gen_telescopingBoxResults(packingLevel) {
+
         // Handle Telescoping boxes
         const minLength = state.inputDimsSorted[0] + this.packingOffsets[packingLevel]
-        const largerOffset = this.largerConstraint - state.inputDimsSorted[1] - this.packingOffsets[packingLevel]
-        const smallerOffset = this.smallerConstraint - state.inputDimsSorted[2] - this.packingOffsets[packingLevel]
+        const largerOffset = this.largerConstraint - state.inputDimsSorted[1]
+        const smallerOffset = this.smallerConstraint - state.inputDimsSorted[2]
         const score = this.calcScore([largerOffset, smallerOffset, 0])
         const endBoxLength = this.openLength + this.flapLength
         const centerBoxLength = endBoxLength + this.flapLength
@@ -530,7 +530,8 @@ class Box {
             centerBoxes = Math.ceil(centerRemaining / centerBoxLength)
         }
         const totalBoxes = 2 + centerBoxes
-        const totalCost = this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)] * totalBoxes
+        // TODO one box should be next level
+        const totalCost = this.getPrice(packingLevel) * (totalBoxes - 1) + this.getPrice(this.nextLevel(packingLevel))
         return new BoxResult(this.dimensions, packingLevel,
             totalCost, this.calcRecomendation([largerOffset, smallerOffset, this.packingOffsets[packingLevel]], packingLevel),
             `Expected dims: [${minLength}, ${this.largerConstraint}, ${this.smallerConstraint}] with ${totalBoxes} boxes`, score, "Telescoping")
@@ -547,7 +548,6 @@ class Box {
         }
 
         // Handle cheating boxes
-
         let bestScore = 1000000
         let bestResult = null
         for (const normalIndex of [0, 1, 2]) {
@@ -560,12 +560,11 @@ class Box {
             newInputDims[normalIndex] = state.inputDimsSorted[normalIndex]
             newInputDims[(normalIndex + 1) % 3] = rotatedSize[0]
             newInputDims[(normalIndex + 2) % 3] = rotatedSize[1]
-            const boxSpace = this.boxSpace(this.dimensions, newInputDims)
-            const score = this.calcScore(boxSpace)
+            const boxOffset = this.boxSpace(this.dimensions, newInputDims)
+            const score = this.calcScore(boxOffset)
             if (score < bestScore) {
                 bestScore = score
-                bestResult = new BoxResult(this.dimensions, packingLevel,
-                    this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(boxSpace, packingLevel),
+                bestResult = new BoxResult(this.dimensions, packingLevel, this.getPrice(packingLevel), this.calcRecomendation(boxOffset, packingLevel),
                     `Internal dims: [${newInputDims[0].toFixed(1)}, ${newInputDims[1].toFixed(1)}, ${newInputDims[2].toFixed(1)}]`, score, "Cheating")
             }
         }
@@ -573,17 +572,16 @@ class Box {
     }
 
     gen_flattenedBoxResults(packingLevel) {
-
         // Handle Flattened boxes
         const flatBoxLength = this.openLength + this.flapLength * 2
         const flatBoxWidth = this.smallerConstraint + this.largerConstraint
         const largerOffset = Math.max(flatBoxLength, flatBoxWidth) - state.inputDimsSorted[0] - this.packingOffsets[packingLevel]
         const smallerOffset = Math.min(flatBoxLength, flatBoxWidth) - state.inputDimsSorted[1] - this.packingOffsets[packingLevel]
         const heightOffset = 1 - state.inputDimsSorted[2]
-        return new BoxResult(this.dimensions, packingLevel,
-            this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation([largerOffset, smallerOffset, heightOffset + 1], packingLevel),
-            `Expected dims: [${flatBoxLength}, ${flatBoxWidth}, ${1}]`, this.calcScore([largerOffset, smallerOffset, heightOffset]), "Flattened")
-
+        const offsets = [largerOffset, smallerOffset, heightOffset]
+        const recomendation = this.calcRecomendation(offsets, packingLevel) == "impossible" ? "impossible" : "fits"     // If the user wants to see flat, then it should be impossible or not
+        return new BoxResult(this.dimensions, packingLevel, this.getPrice(packingLevel), recomendation,
+            `Expected dims: [${flatBoxLength}, ${flatBoxWidth}, ${1}]`, this.calcScore(offsets), "Flattened")
     }
 
     gen_boxResults() {
@@ -655,12 +653,6 @@ function load_boxes() {
 
     ]
     const testBox = new Box([6, 6, 6], 2, [5.99, 8.89, 10.74, 12.48])
-    // Anonomize the prices for testing
-    // for (let boxIndex in boxes) {
-    //     for (let priceIndex in boxes[boxIndex].prices) {
-    //         boxes[boxIndex].prices[priceIndex] += Math.round(Math.random() * 100) / 100 + 1
-    //     }
-    // }
     state.availableBoxes = boxes
 }
 
