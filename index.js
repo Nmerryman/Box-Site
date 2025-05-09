@@ -581,7 +581,7 @@ class Box {
         const smallerOffset = Math.min(flatBoxLength, flatBoxWidth) - state.inputDimsSorted[1] - this.packingOffsets[packingLevel]
         const heightOffset = 1 - state.inputDimsSorted[2]
         return new BoxResult(this.dimensions, packingLevel,
-            this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation([largerOffset, smallerOffset, heightOffset], packingLevel),
+            this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation([largerOffset, smallerOffset, heightOffset + 1], packingLevel),
             `Expected dims: [${flatBoxLength}, ${flatBoxWidth}, ${1}]`, this.calcScore([largerOffset, smallerOffset, heightOffset]), "Flattened")
 
     }
