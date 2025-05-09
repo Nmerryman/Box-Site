@@ -211,6 +211,7 @@ function gen_html() {
                     gen_chart()
                 }
             })
+            debugDiv.appendChild(document.createTextNode("Print scale: "))
             debugDiv.appendChild(scaleVal)
 
             const commentBox = document.createElement("input")
@@ -433,6 +434,7 @@ class Box {
     }
 
     static NormalBox(dimensions, prices) {
+        // Assumes the last dimension is the open dimension (should be the smallest one)
         return new Box(dimensions, 2, prices)
     }
 
@@ -612,6 +614,7 @@ class Box {
 
 function load_boxes() {
     // Box(dimensions, open_dim, prices)
+    // I didn't feel like splitting this into a different file/web request because I'm the only one using it
     const boxes = [
         Box.NormalBox([6, 6, 6], [5.99, 8.89, 10.74, 12.48]),
         Box.NormalBox([8, 8, 8], [7.99, 12.17, 15.91, 19.25]),
