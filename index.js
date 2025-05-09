@@ -427,11 +427,22 @@ class Box {
         }
         this.flapLength = this.smallerConstraint / 2
 
-        // this.debug = this.largerConstraint == 6 && this.smallerConstraint == 6 && this.openLength == 48
+        this.debug = this.largerConstraint == 6 && this.smallerConstraint == 6 && this.openLength == 48
+        this.debugState = null
     }
 
     static NormalBox(dimensions, prices) {
         return new Box(dimensions, 2, prices)
+    }
+
+    pushDebug(val) {
+        this.debugState = this.debug
+        this.debug = val
+    }
+
+    popDebug() {
+        this.debug = this.debugState
+        this.debugState = null
     }
 
     boxSpace(boxDims, itemDims) {
@@ -577,6 +588,9 @@ class Box {
 
     gen_boxResults() {
         // Based on current state
+        if (this.debug) {
+            console.log("---Gen box results---")
+        }
         const result = {}
         for (const packingLevel of this.packingLevelNames) {
             result[packingLevel] = {}
