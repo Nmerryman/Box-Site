@@ -426,6 +426,8 @@ class Box {
             this.smallerConstraint = this.dimensions[1]
         }
         this.flapLength = this.smallerConstraint / 2
+
+        // this.debug = this.largerConstraint == 6 && this.smallerConstraint == 6 && this.openLength == 48
     }
 
     static NormalBox(dimensions, prices) {
@@ -441,6 +443,7 @@ class Box {
     calcScore(extraSpace) {
         // space: [x, y, z] -> space in each dimension in the box
         // expected space: int -> how much space each dimension should have
+        // TODO: See if it makes sense to pass the packing level
         return extraSpace[0] ** 2 + extraSpace[1] ** 2 + extraSpace[2] ** 2 
     }
 
@@ -526,6 +529,7 @@ class Box {
         function calcRotatedSize(outerHight, outerWidth, innerHight, innerWidth) {
             const angle = Math.atan(outerWidth / outerHight)
             // Not sure if the angle is correct or needs to be inverted
+            // I think there is an assumption that the height is the larger dimension
             const rotatedHight = Math.sin(angle) * innerWidth + Math.cos(angle) * innerHight
             const rotatedWidth = Math.cos(angle) * innerWidth + Math.sin(angle) * innerHight
             return [rotatedHight, rotatedWidth]
@@ -536,29 +540,33 @@ class Box {
         const dimOneSpace = this.dimensions[1] - this.packingOffsets[packingLevel]
         const dimTwoSpace = this.dimensions[2] - this.packingOffsets[packingLevel]
 
-        let fit = calcRotatedSize(this.dimensions[0], this.dimensions[1], state.inputDimsSorted[0], state.inputDimsSorted[1])
-        let score = this.calcScore([dimZeroSpace - fit[0], dimOneSpace - fit[1], dimTwoSpace])
+        let fit = calcRotatedSize(dimZeroSpace, dimOneSpace, state.inputDimsSorted[0], state.inputDimsSorted[1])
+        let boxSpace = this.boxSpace(this.dimensions, [fit[0], fit[1], state.inputDimsSorted[2]])
+        let score = this.calcScore(boxSpace)
         let bestScore = score
         let bestResult = new BoxResult(this.dimensions, packingLevel, 
-            this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation([dimZeroSpace - fit[0], dimOneSpace - fit[1], dimTwoSpace - state.inputDimsSorted[2]], packingLevel),
+            this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(boxSpace, packingLevel),
             "Internal dims: [" + fit[0].toFixed(1) + ", " + fit[1].toFixed(1) + ", " + state.inputDimsSorted[2] + "]", bestScore, "Cheating")
         
-        fit = calcRotatedSize(this.dimensions[0], this.dimensions[2], state.inputDimsSorted[0], state.inputDimsSorted[2])
-        score = this.calcScore([dimZeroSpace - fit[0], dimOneSpace, dimTwoSpace - fit[1]])
+        fit = calcRotatedSize(dimZeroSpace, dimTwoSpace, state.inputDimsSorted[0], state.inputDimsSorted[2])
+        boxSpace = this.boxSpace(this.dimensions, [fit[0], state.inputDimsSorted[1], fit[1]])
+        score = this.calcScore(boxSpace)
         if (score < bestScore) {
             bestScore = score
             bestResult = new BoxResult(this.dimensions, packingLevel, 
-                this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation([dimZeroSpace - fit[0], dimOneSpace - state.inputDimsSorted[1], dimTwoSpace - fit[1]], packingLevel),
+                this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(boxSpace, packingLevel),
                 "Internal dims: [" + fit[0].toFixed(1) + ", " + state.inputDimsSorted[1] + ", " + fit[1].toFixed(1) + "]", bestScore, "Cheating")
         }
-        fit = calcRotatedSize(this.dimensions[1], this.dimensions[2], state.inputDimsSorted[1], state.inputDimsSorted[2])
-        score = this.calcScore([dimZeroSpace, dimOneSpace - fit[0], dimTwoSpace - fit[1]])
+        fit = calcRotatedSize(dimOneSpace, dimTwoSpace, state.inputDimsSorted[1], state.inputDimsSorted[2])
+        boxSpace = this.boxSpace(this.dimensions, [state.inputDimsSorted[0], fit[0], fit[1]])
+        score = this.calcScore(boxSpace)
         if (score < bestScore) {
             bestScore = score
             bestResult = new BoxResult(this.dimensions, packingLevel, 
-                this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation([dimZeroSpace - state.inputDimsSorted[0], dimOneSpace - fit[0], dimTwoSpace - fit[1]], packingLevel),
+                this.prices[this.packingLevelNames.findIndex(e => e == packingLevel)], this.calcRecomendation(boxSpace, packingLevel),
                 "Internal dims: [" + state.inputDimsSorted[0] + ", " + fit[0].toFixed(1) + ", " + fit[1].toFixed(1) + "]", bestScore, "Cheating")
         }
+
         return bestResult
 
     }
