@@ -5,3 +5,4 @@ services:
       - ./:/code
     ports:
       - "5893:5000"
+    restart: always
