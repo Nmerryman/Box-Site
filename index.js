@@ -408,8 +408,7 @@ class Box {
         this.dimensions = dimensions.toSorted((a, b) => b - a)     // Just to presort by size
         this.open_dim = this.dimensions.findIndex((e) => {return e == open_dim_val})
         this.prices = prices
-        // this.packingLevelNames = ["No Pack", "Standard Pack", "Fragile Pack", "Custom Pack"]
-        this.packingLevelNames = ["Standard Pack", ]
+        this.packingLevelNames = ["No Pack", "Standard Pack", "Fragile Pack", "Custom Pack"]
         this.altPackingNames = ["Normal", "Telescoping", "Cheating", "Flattened"]
         this.packingOffsets = {
             "No Pack": 0,
